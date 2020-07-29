@@ -17,12 +17,14 @@ import scipy.sparse.linalg
 
 
 class linearStrouhal:
- def __init__(_self, _numPhysical, _numNodes, _x, _y):
+ def __init__(_self, _numPhysical, _numNodes, _x, _y, _Re):
   _self.numPhysical = _numPhysical
   _self.numNodes = _numNodes
   _self.x = _x
   _self.y = _y
+  _self.Re = _Re
   _self.inflowVelocity = 1.0
+  _self.L = np.max(_self.y)
   _self.benchmark_problem = 'linear Strouhal'
 
 
@@ -90,18 +92,10 @@ class linearStrouhal:
    v2 = _self.boundaryEdges[i][2] - 1
 
    # Noslip 
-   if line == 5:
+   if line == 1 or line == 3 or line == 4 or line == 5:
     _self.aux1BC[v1] = 0.0
     _self.aux1BC[v2] = 0.0
  
-    _self.dirichletNodes.append(v1)
-    _self.dirichletNodes.append(v2)
-
-   # Inflow
-   elif line == 4:
-    _self.aux1BC[v1] = 0.0
-    _self.aux1BC[v2] = 0.0
-
     _self.dirichletNodes.append(v1)
     _self.dirichletNodes.append(v2)
 
@@ -149,23 +143,19 @@ class linearStrouhal:
    # Top Line
    # Ref: Batchelor 1967 pag. 76 eq. 2.2.8
    elif line == 3:
-    _self.aux1BC[v1] = 32.0
-    _self.aux1BC[v2] = 32.0
+    _self.aux1BC[v1] = _self.L*_self.inflowVelocity
+    _self.aux1BC[v2] = _self.L*_self.inflowVelocity
 
     _self.dirichletNodes.append(v1)
     _self.dirichletNodes.append(v2)
 
    # Circle
    elif line == 5:
-    _self.aux1BC[v1] = 16.0
-    _self.aux1BC[v2] = 16.0
+    _self.aux1BC[v1] = (_self.L*_self.inflowVelocity)/2.0
+    _self.aux1BC[v2] = (_self.L*_self.inflowVelocity)/2.0
 
     _self.dirichletNodes.append(v1)
     _self.dirichletNodes.append(v2)
-
-
-
-
 
   _self.dirichletNodes = np.unique(_self.dirichletNodes)
 

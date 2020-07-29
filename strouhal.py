@@ -123,7 +123,7 @@ start_time = time()
 
 # Linear and Mini Elements
 if polynomial_option == 0 or polynomial_option == 1 or polynomial_option == 2:
- mshFileName = 'strouhal.msh'
+ mshFileName = 'strouhal_luis.msh'
 
  pathMSHFile = searchMSH.Find(mshFileName)
  if pathMSHFile == 'File not found':
@@ -259,18 +259,18 @@ if polynomial_option == 0 or polynomial_option == 1 or polynomial_option == 2:
 
  # Applying vx condition
  xVelocityLHS0 = sps.lil_matrix.copy(M)
- xVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y)
+ xVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y,Re)
  xVelocityBC.xVelocityCondition(boundaryEdges,xVelocityLHS0,neighborsNodes)
  benchmark_problem = xVelocityBC.benchmark_problem
 
  # Applying vy condition
  yVelocityLHS0 = sps.lil_matrix.copy(M)
- yVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y)
+ yVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y,Re)
  yVelocityBC.yVelocityCondition(boundaryEdges,yVelocityLHS0,neighborsNodes)
 
  # Applying psi condition
  streamFunctionLHS0 = sps.lil_matrix.copy(Kxx) + sps.lil_matrix.copy(Kyy)
- streamFunctionBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y)
+ streamFunctionBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y,Re)
  streamFunctionBC.streamFunctionCondition(boundaryEdges,streamFunctionLHS0,neighborsNodes)
 
  # Applying vorticity condition
@@ -333,7 +333,7 @@ psi = psi[0].reshape((len(psi[0]),1))
 
 
 # -------------------------- Import VTK File ------------------------------------
-#numNodes, numElements, IEN, x, y, vx, vy, w, psi, psi = importVTK.vtkFile("/home/marquesleandro/strouhal/results/test4/test4656.vtk", polynomial_option)
+#numNodes, numElements, IEN, x, y, vx, vy, w, psi, psi = importVTK.vtkFile("/home/marquesleandro/strouhal/results/test4/test4173.vtk", polynomial_option)
 #----------------------------------------------------------------------------------
 
 
@@ -381,13 +381,13 @@ os.chdir(initial_path)
 # ------------------------ Export VTK File ---------------------------------------
 # Linear and Mini Elements
 if polynomial_option == 0 or polynomial_option == 1 or polynomial_option == 2:   
- save = exportVTK.Linear2D(x,y,IEN,numNodes,numElements,w,w,psi,vx,vy)
+ save = exportVTK.Linear2D(x,y,IEN,numNodes,numElements,w,psi,psi,vx,vy)
  save.create_dir(folderResults)
  save.saveVTK(folderResults + str(0))
 
 # Quad Element
 elif polynomial_option == 3:   
- save = exportVTK.Quad2D(x,y,IEN,numNodes,numElements,w,w,psi,vx,vy)
+ save = exportVTK.Quad2D(x,y,IEN,numNodes,numElements,w,psi,psi,vx,vy)
  save.create_dir(folderResults)
  save.saveVTK(folderResults + str(0))
 # ---------------------------------------------------------------------------------
@@ -510,18 +510,18 @@ for t in tqdm(range(1, nt)):
  
     # Applying vx condition
     xVelocityLHS0 = sps.lil_matrix.copy(M)
-    xVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y)
+    xVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y,Re)
     xVelocityBC.xVelocityCondition(boundaryEdges,xVelocityLHS0,neighborsNodes)
     benchmark_problem = xVelocityBC.benchmark_problem
    
     # Applying vr condition
     yVelocityLHS0 = sps.lil_matrix.copy(M)
-    yVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y)
+    yVelocityBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y,Re)
     yVelocityBC.yVelocityCondition(boundaryEdges,yVelocityLHS0,neighborsNodes)
 
     # Applying psi condition
     streamFunctionLHS0 = sps.lil_matrix.copy(Kxx) + sps.lil_matrix.copy(Kyy)
-    streamFunctionBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y)
+    streamFunctionBC = benchmarkProblems.linearStrouhal(numPhysical,numNodes,x,y,Re)
     streamFunctionBC.streamFunctionCondition(boundaryEdges,streamFunctionLHS0,neighborsNodes)
    
     # Applying vorticity condition
@@ -584,22 +584,31 @@ for t in tqdm(range(1, nt)):
   vorticityAux1BC = scipy.sparse.linalg.cg(vorticityLHS,vorticityRHS,vorticityAux1BC, maxiter=1.0e+05, tol=1.0e-05)
   vorticityAux1BC = vorticityAux1BC[0].reshape((len(vorticityAux1BC[0]),1))
 
-  ## Dirichlet condition
-  #vorticityDirichletNodes = boundaryNodes
-  #for i in range(0, len(boundaryEdges)):
-  # line = boundaryEdges[i][0]
-  # v1 = boundaryEdges[i][1] - 1
-  # v2 = boundaryEdges[i][2] - 1
+  # Dirichlet condition
+  vorticityDirichletNodes = boundaryNodes
+  for i in range(0, len(boundaryEdges)):
+   line = boundaryEdges[i][0]
+   v1 = boundaryEdges[i][1] - 1
+   v2 = boundaryEdges[i][2] - 1
 
-  # # Noslip 
-  # if line == 1 or line == 3 or line == 4:
-  #  vorticityAux1BC[v1] = 0.0
-  #  vorticityAux1BC[v2] = 0.0
+   # Noslip 
+   if line == 1 or line == 3:
+    vorticityAux1BC[v1] = 0.0
+    vorticityAux1BC[v2] = 0.0
  
-  #  vorticityDirichletNodes.append(v1)
-  #  vorticityDirichletNodes.append(v2)
+    vorticityDirichletNodes.append(v1)
+    vorticityDirichletNodes.append(v2)
 
-  #vorticityDirichletNodes = np.unique(vorticityDirichletNodes)
+   # Circle and inflow
+   if line == 5 or line == 4:
+    vorticityAux1BC[v1] = vorticityAux1BC[v1]
+    vorticityAux1BC[v2] = vorticityAux1BC[v2]
+ 
+    vorticityDirichletNodes.append(v1)
+    vorticityDirichletNodes.append(v2)
+
+
+  vorticityDirichletNodes = np.unique(vorticityDirichletNodes)
 
 
  
@@ -769,9 +778,9 @@ for t in tqdm(range(1, nt)):
   # ---------------------------------------------------------------------------------
  
   # ------------------------ CHECK CONVERGENCE RESULT ----------------------------------
-  if np.linalg.norm(vx) > 10e2 or np.linalg.norm(vy) > 10e2:
-   end_type = 2
-   break
+  #if np.linalg.norm(vx) > 10e2 or np.linalg.norm(vy) > 10e2:
+  # end_type = 2
+  # break
   # ---------------------------------------------------------------------------------
   
 
